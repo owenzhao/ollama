@@ -83,7 +83,7 @@ jobs:
             shell: bash
             artifact: ollama-darwin-arm64
             prepare: |
-              brew install zstd
+              brew install go zstd
             build: |
               chmod +x ./scripts/build_darwin.sh
               ./scripts/build_darwin.sh build app
@@ -107,7 +107,7 @@ jobs:
             shell: pwsh
             artifact: ollama-windows-amd64
             prepare: |
-              choco install -y 7zip
+              choco install -y 7zip golang
             build: |
               powershell -ExecutionPolicy Bypass -File .\scripts\build_windows.ps1
             package_step: |
