@@ -83,13 +83,20 @@ jobs:
             shell: bash
             artifact: ollama-darwin-arm64
             prepare: |
-              brew install go zstd
+              brew install go zstd npm
             build: |
               chmod +x ./scripts/build_darwin.sh
-              ./scripts/build_darwin.sh build app
+              ./scripts/build_darwin.sh build package app
             package_step: |
-              cd dist/darwin-arm64
-              zip -r ../../ollama-darwin-arm64.zip .
+              # _build_macapp produces dist/Ollama-darwin.zip — the .app bundle.
+              # It contains the same patched ollama binary plus MLX/Metal libs,
+              # matches the layout ollama's official release ships.
+              if [ -f dist/Ollama-darwin.zip ]; then
+                mv dist/Ollama-darwin.zip ollama-darwin-arm64.zip
+              else
+                echo "::error::dist/Ollama-darwin.zip not found — build_darwin.sh app step did not produce it"
+                exit 1
+              fi
           - label: Linux (amd64)
             runner: ubuntu-latest
             shell: bash
