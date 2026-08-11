@@ -1,3 +1,13 @@
+> [!IMPORTANT]
+> **This is a personal patched fork of [ollama/ollama](https://github.com/ollama/ollama).**
+>
+> The single change vs upstream is in [`patches/ollama_origins.patch`](./patches/ollama_origins.patch):
+>
+> - **`OLLAMA_ORIGINS` now defaults to `*`** instead of the empty default.
+> - Without this patch, [`envconfig/config.go`](./envconfig/config.go) only adds `localhost` / `127.0.0.1` / `0.0.0.0` to the origin allowlist when the env var is unset, so **any browser extension or non-localhost origin gets CORS-rejected out of the box**. The patch flips the default to `*` so the CORS preflight stops blocking you — set `OLLAMA_ORIGINS` to a comma-separated list (e.g. `chrome-extension://abcd,https://app.example.com`) if you want to lock it back down.
+>
+> Patched binaries are built automatically by [`.github/workflows/build.yml`](./.github/workflows/build.yml) every time `ollama/ollama` tags a new release, and published on the [Releases](../../releases) page. Code-wise, everything else is identical to upstream.
+
 <p align="center">
   <a href="https://ollama.com">
     <img src="https://github.com/ollama/ollama/assets/3325447/0d0b44e2-8f4a-4e99-9b52-a5c1c741c8f7" alt="ollama" width="200"/>
