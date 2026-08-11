@@ -7,6 +7,8 @@
 > - Without this patch, [`envconfig/config.go`](./envconfig/config.go) only adds `localhost` / `127.0.0.1` / `0.0.0.0` to the origin allowlist when the env var is unset, so **any browser extension or non-localhost origin gets CORS-rejected out of the box**. The patch flips the default to `*` so the CORS preflight stops blocking you — set `OLLAMA_ORIGINS` to a comma-separated list (e.g. `chrome-extension://abcd,https://app.example.com`) if you want to lock it back down.
 >
 > Patched binaries are built automatically by [`.github/workflows/build.yml`](./.github/workflows/build.yml) every time `ollama/ollama` tags a new release, and published on the [Releases](../../releases) page. Code-wise, everything else is identical to upstream.
+>
+> **macOS specifics** — the Apple Silicon build uses the same [`scripts/build_darwin.sh`](./scripts/build_darwin.sh) as the official release, so the `Ollama.app` here ships with **MLX enabled** (`metal_v3;metal_v4`), so you get on-device Apple-silicon GPU acceleration for supported models out of the box. Drop the `.app` into `/Applications` and run `ollama serve` from the bundled `Contents/Resources/ollama` binary — both behave identically to the official build, minus the CORS default.
 
 <p align="center">
   <a href="https://ollama.com">
