@@ -100,18 +100,23 @@ jobs:
                 echo "::error::dist/Ollama-darwin.zip not found — build_darwin.sh app step did not produce it"
                 exit 1
               fi
-          - label: Linux (amd64)
-            runner: ubuntu-latest
-            shell: bash
-            artifact: ollama-linux-amd64
-            prepare: |
-              sudo apt-get update
-              sudo apt-get install -y zstd
-            build: |
-              chmod +x ./scripts/build_linux.sh
-              PLATFORM=linux/amd64 ./scripts/build_linux.sh
-            package_step: |
-              cp dist/ollama-linux-amd64.tar.zst ../ollama-linux-amd64.tar.zst
+          # Linux build temporarily disabled: docker buildx + 600+ .cpp files
+          # hangs / takes 3+ hours on GitHub's ubuntu-latest runner. macOS
+          # (this fork's primary target) and Windows already work. Re-enable
+          # when there's bandwidth to optimize (e.g. ccache, multi-stage cache,
+          # or move Linux build to a self-hosted runner).
+          # - label: Linux (amd64)
+          #   runner: ubuntu-latest
+          #   shell: bash
+          #   artifact: ollama-linux-amd64
+          #   prepare: |
+          #     sudo apt-get update
+          #     sudo apt-get install -y zstd
+          #   build: |
+          #     chmod +x ./scripts/build_linux.sh
+          #     PLATFORM=linux/amd64 ./scripts/build_linux.sh
+          #   package_step: |
+          #     cp dist/ollama-linux-amd64.tar.zst ../ollama-linux-amd64.tar.zst
           - label: Windows (amd64)
             runner: windows-latest
             shell: pwsh
