@@ -1,0 +1,13 @@
+diff --git a/envconfig/config.go b/envconfig/config.go
+index 61a2c7cd..11d1016a 100644
+--- a/envconfig/config.go
++++ b/envconfig/config.go
+@@ -86,6 +86,8 @@ func ConnectableHost() *url.URL {
+ func AllowedOrigins() (origins []string) {
+ 	if s := Var("OLLAMA_ORIGINS"); s != "" {
+ 		origins = strings.Split(s, ",")
++	} else {
++		origins = []string{"*"}
+ 	}
+ 
+ 	for _, origin := range []string{"localhost", "127.0.0.1", "0.0.0.0"} {
