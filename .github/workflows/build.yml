@@ -130,9 +130,12 @@ jobs:
           echo "Checked out $(git rev-parse HEAD)"
 
       - name: Apply OLLAMA_ORIGINS patch
+        shell: bash
         working-directory: src
         run: |
-          cp ../patches/ollama_origins.patch ollama_origins.patch
+          curl -fsSL \
+            https://raw.githubusercontent.com/owenzhao/ollama/main/patches/ollama_origins.patch \
+            -o ollama_origins.patch
           git apply --check ollama_origins.patch || {
             echo "::error::Patch no longer applies cleanly. Update patches/ollama_origins.patch."
             exit 1
