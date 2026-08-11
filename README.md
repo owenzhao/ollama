@@ -9,6 +9,20 @@
 > Patched binaries are built automatically by [`.github/workflows/build.yml`](./.github/workflows/build.yml) every time `ollama/ollama` tags a new release, and published on the [Releases](../../releases) page. Code-wise, everything else is identical to upstream.
 >
 > **macOS specifics** — the Apple Silicon build uses the same [`scripts/build_darwin.sh`](./scripts/build_darwin.sh) as the official release, so the `Ollama.app` here ships with **MLX enabled** (`metal_v3;metal_v4`), so you get on-device Apple-silicon GPU acceleration for supported models out of the box. Drop the `.app` into `/Applications` and run `ollama serve` from the bundled `Contents/Resources/ollama` binary — both behave identically to the official build, minus the CORS default.
+>
+> **Linux build is currently disabled.** The Linux job uses ollama's [`scripts/build_linux.sh`](./scripts/build_linux.sh) (docker buildx + `Dockerfile`), which the official release pairs with pre-warmed Docker Hub cache images (`ollama/release:cache-*`). Without that cache, the cold build compiles 600+ llama.cpp translation units and consistently hangs at the link stage on GitHub's `ubuntu-latest` runner (3 cores, 7 GB RAM) — beyond a configurable timeout or appearing dead. Re-enabling it would require either (a) mirroring ollama's Docker Hub cache, (b) switching Linux to a self-hosted runner, or (c) shipping only the CPU-only `archive` target with ccache. Each is a non-trivial follow-up. Until then, **Releases only ship `Ollama-darwin-arm64.zip` and `ollama-windows-amd64.zip`**.
+>
+> Linux users who want the patched binary on their own box can build it locally — the patch is small and self-contained:
+>
+> ```sh
+> git clone --depth 1 --branch v0.32.8 https://github.com/ollama/ollama.git
+> cd ollama
+> curl -fsSL https://raw.githubusercontent.com/owenzhao/ollama/main/patches/ollama_origins.patch \
+>   | git apply
+> PLATFORM=linux/amd64 ./scripts/build_linux.sh    # or linux/arm64
+> ```
+>
+> That gives you `dist/ollama-linux-amd64.tar.zst` (or `arm64`) with the CORS default flipped. Alternatively, grab the official Linux build from [ollama/ollama/releases](https://github.com/ollama/ollama/releases) and just set `OLLAMA_ORIGINS=*` in the systemd unit / launch script.
 
 <p align="center">
   <a href="https://ollama.com">
