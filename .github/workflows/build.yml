@@ -9,8 +9,12 @@ name: Build and Release (CORS-patched)
 #   - workflow_dispatch: manual run from the Actions tab
 
 on:
-  schedule:
-    - cron: '17 4 * * *'  # daily, off-peak UTC
+  # The automatic daily build is retired. The official Ollama binaries plus the
+  # OLLAMA_ORIGINS environment variable produce the exact same CORS behaviour
+  # (see the README), and the official Windows/macOS artifacts additionally ship
+  # full GPU acceleration (CUDA / ROCm / Vulkan, MLX) that a self-built binary
+  # is easy to lose. Trigger this workflow manually from the Actions tab when
+  # you want a pre-patched build to hand out.
   workflow_dispatch:
     inputs:
       tag:
@@ -130,6 +134,54 @@ jobs:
                 Copy-Item dist\ollama-windows-amd64.zip ..\ollama-windows-amd64.zip -Force
               } else {
                 throw "Windows build did not produce dist\ollama-windows-amd64.zip"
+              }
+          # GPU-enabled Windows build, shipped as a SEPARATE artifact.
+          #
+          # Why a separate matrix leg instead of extending the one above:
+          #   a failing matrix leg fails the whole `build` job, which would
+          #   block the `release` job and therefore the macOS artifact too.
+          #   `continue-on-error: true` makes this leg's failure non-fatal, so
+          #   a broken GPU build can never take the macOS release down with it.
+          #
+          # Why Vulkan first: the Vulkan backend needs no GPU at build time
+          # and no multi-GB CUDA Toolkit, so it compiles in minutes on a
+          # stock GitHub-hosted windows-latest runner (~40 MB of artifacts).
+          # CUDA needs the toolkit plus a 12-architecture nvcc compile, which
+          # is a coin flip on 4 vCPU / 16 GB runners — see the notes in the
+          # PR for adding it safely.
+          - label: Windows (amd64, GPU)
+            runner: windows-latest
+            shell: pwsh
+            artifact: ollama-windows-amd64-gpu
+            continue-on-error: true
+            prepare: |
+              choco install -y 7zip golang
+              # scripts/build_windows.ps1 only builds the Vulkan backend when
+              # $env:VULKAN_SDK is set; otherwise it prints "Vulkan not
+              # detected, skipping" and ships a CPU-only binary. Same
+              # installer URL and flags that ollama/ollama uses upstream.
+              $vulkanInstaller = "$env:RUNNER_TEMP\vulkansdk-windows-X64-1.4.321.1.exe"
+              Invoke-WebRequest -Uri 'https://sdk.lunarg.com/sdk/download/1.4.321.1/windows/vulkansdk-windows-X64-1.4.321.1.exe' -OutFile $vulkanInstaller
+              Write-Output "Installing Vulkan SDK 1.4.321.1..."
+              Start-Process -FilePath $vulkanInstaller -ArgumentList '-c','--am','--al','in' -NoNewWindow -Wait
+              $vulkanRoot = @(Resolve-Path 'C:\VulkanSDK\*')[0].Path
+              $vulkanRuntime = Join-Path $vulkanRoot 'Helpers\VulkanRT.exe'
+              if (Test-Path $vulkanRuntime) {
+                Start-Process -FilePath $vulkanRuntime -ArgumentList '/s' -NoNewWindow -Wait
+              }
+              echo "$vulkanRoot\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+              echo "VULKAN_SDK=$vulkanRoot" >> $env:GITHUB_ENV
+              Write-Output "Vulkan SDK ready: $vulkanRoot"
+            build: |
+              powershell -ExecutionPolicy Bypass -File .\scripts\build_windows.ps1
+            package_step: |
+              if (Test-Path dist\ollama-windows-amd64.zip) {
+                Copy-Item dist\ollama-windows-amd64.zip ..\ollama-windows-amd64-gpu.zip -Force
+              } else {
+                throw "Windows GPU build did not produce dist\ollama-windows-amd64.zip"
+              }
+              if (-not (Test-Path dist\windows-amd64\lib\ollama\vulkan\ggml-vulkan.dll)) {
+                throw "Vulkan backend missing — the build silently fell back to CPU-only"
               }
 
     steps:
