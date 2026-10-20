@@ -1,12 +1,15 @@
 name: Build and Release (CORS-patched)
 
-# Auto-build a patched ollama binary whenever upstream ollama/ollama ships a
-# new release tag. The patch defaults OLLAMA_ORIGINS to "*" so browser
-# extensions / non-localhost origins aren't CORS-rejected out of the box.
+# Build a patched ollama binary on demand. The patch defaults OLLAMA_ORIGINS
+# to "*" so browser extensions / non-localhost origins aren't CORS-rejected
+# out of the box.
 #
 # Triggered by:
-#   - schedule: poll upstream tags once a day
 #   - workflow_dispatch: manual run from the Actions tab
+#
+# The automatic daily build has been retired: the official Ollama binaries plus
+# the OLLAMA_ORIGINS environment variable produce the same allowlist, and the
+# official Windows/macOS artifacts keep full GPU acceleration. See the README.
 
 on:
   # The automatic daily build is retired. The official Ollama binaries plus the
