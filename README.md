@@ -6,13 +6,45 @@
 > - **`OLLAMA_ORIGINS` now defaults to `*`** instead of the empty default.
 > - Without this patch, [`envconfig/config.go`](./envconfig/config.go) only adds `localhost` / `127.0.0.1` / `0.0.0.0` to the origin allowlist when the env var is unset, so **any browser extension or non-localhost origin gets CORS-rejected out of the box**. The patch flips the default to `*` so the CORS preflight stops blocking you — set `OLLAMA_ORIGINS` to a comma-separated list (e.g. `chrome-extension://abcd,https://app.example.com`) if you want to lock it back down.
 >
-> Patched binaries are built automatically by [`.github/workflows/build.yml`](./.github/workflows/build.yml) every time `ollama/ollama` tags a new release, and published on the [Releases](../../releases) page. Code-wise, everything else is identical to upstream.
+> ### You probably don't need this fork
 >
-> **macOS specifics** — the Apple Silicon build uses the same [`scripts/build_darwin.sh`](./scripts/build_darwin.sh) as the official release, so the `Ollama.app` here ships with **MLX enabled** (`metal_v3;metal_v4`), so you get on-device Apple-silicon GPU acceleration for supported models out of the box. Drop the `.app` into `/Applications` and run `ollama serve` from the bundled `Contents/Resources/ollama` binary — both behave identically to the official build, minus the CORS default.
+> The patch only changes a **default**. Upstream Ollama reads the very same setting from the `OLLAMA_ORIGINS` environment variable, and setting it yields a byte-identical allowlist — so the **official binaries behave exactly the same**, and they additionally ship full GPU acceleration (CUDA / ROCm / Vulkan on Windows, MLX on Apple silicon) that a self-built binary is easy to lose.
 >
-> **Linux build is currently disabled.** The Linux job uses ollama's [`scripts/build_linux.sh`](./scripts/build_linux.sh) (docker buildx + `Dockerfile`), which the official release pairs with pre-warmed Docker Hub cache images (`ollama/release:cache-*`). Without that cache, the cold build compiles 600+ llama.cpp translation units and consistently hangs at the link stage on GitHub's `ubuntu-latest` runner (3 cores, 7 GB RAM) — beyond a configurable timeout or appearing dead. Re-enabling it would require either (a) mirroring ollama's Docker Hub cache, (b) switching Linux to a self-hosted runner, or (c) shipping only the CPU-only `archive` target with ccache. Each is a non-trivial follow-up. Until then, **Releases only ship `Ollama-darwin-arm64.zip` and `ollama-windows-amd64.zip`**.
+> This is the officially documented way to widen the allowlist — see the [upstream FAQ](https://github.com/ollama/ollama/blob/main/docs/faq.mdx#how-can-i-allow-additional-web-origins-to-access-ollama).
 >
-> Linux users who want the patched binary on their own box can build it locally — the patch is small and self-contained:
+> **Windows** — set it once, then restart Ollama:
+>
+> ```powershell
+> setx OLLAMA_ORIGINS "*"
+> ```
+>
+> Or through the GUI: Settings → System → System info → Advanced system settings → Environment variables → *User variables* → New → name `OLLAMA_ORIGINS`, value `*`.
+>
+> **macOS** — the `.app` and the CLI read it from two different places:
+>
+> ```sh
+> launchctl setenv OLLAMA_ORIGINS '*'            # for Ollama.app
+> echo "export OLLAMA_ORIGINS='*'" >> ~/.zshrc   # for the CLI
+> ```
+>
+> **Linux** — in the systemd unit or launch script:
+>
+> ```ini
+> [Service]
+> Environment=OLLAMA_ORIGINS=*
+> ```
+>
+> To lock it back down, set `OLLAMA_ORIGINS` to a comma-separated list (e.g. `chrome-extension://abcd,https://app.example.com`).
+>
+> ### Building the patched binaries
+>
+> The automatic daily build is **retired** — the official binaries plus the environment variable are equivalent and keep full GPU acceleration. You can still trigger a build manually from the Actions tab, or build locally:
+>
+> **macOS specifics** — the Apple Silicon build uses the same [`scripts/build_darwin.sh`](./scripts/build_darwin.sh) as the official release, so the `Ollama.app` here ships with **MLX enabled** (`metal_v3;metal_v4`), same as the official one — you get on-device Apple-silicon GPU acceleration for supported models out of the box. The official `Ollama-darwin.zip` is therefore equivalent, minus the CORS default, which `launchctl setenv OLLAMA_ORIGINS '*'` restores.
+>
+> **Linux build is currently disabled.** The Linux job uses ollama's [`scripts/build_linux.sh`](./scripts/build_linux.sh) (docker buildx + `Dockerfile`), which the official release pairs with pre-warmed Docker Hub cache images (`ollama/release:cache-*`). Without that cache, the cold build compiles 600+ llama.cpp translation units and consistently hangs at the link stage on GitHub's `ubuntu-latest` runner (3 cores, 7 GB RAM) — beyond a configurable timeout or appearing dead. Re-enabling it would require either (a) mirroring ollama's Docker Hub cache, (b) switching Linux to a self-hosted runner, or (c) shipping only the CPU-only `archive` target with ccache. Each is a non-trivial follow-up. Until then, **Releases only ship `Ollama-darwin-arm64.zip` and `ollama-windows-amd64.zip`**, and those are legacy artifacts — the official downloads are the recommended path.
+>
+> If you still want a patched binary on your own box, build it locally — the patch is small and self-contained:
 >
 > ```sh
 > git clone --depth 1 --branch v0.32.8 https://github.com/ollama/ollama.git
